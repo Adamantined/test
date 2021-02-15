@@ -1,0 +1,75 @@
+<launch>
+
+  <!--
+    roslaunch file for starting the ros_control controllers
+  -->
+  <!-- Load robot model -->
+  <param name="robot_description"
+    	 command="$(find xacro)/xacro '$(find dagozilla_description)/urdf/robot.xacro' --inorder"/>
+
+  <node name="dagozilla_node" 
+        pkg="dagozilla_base" 
+        type="dagozilla_base_node"
+    output="screen"/>
+
+  
+  <!-- Load joint controller configurations from YAML file to parameter server -->
+  <rosparam file="$(find dagozilla_control)/config/dagozilla_control.yaml"
+            command="load"/>
+
+  <!-- load the controllers -->
+  <!--
+    The controller_spawner node starts the two wheel/joint position controllers for the robot by running a python script that makes a service call to the ros_control controller manager. The service calls tell the controller manager which controllers you want. It also loads a third controller that publishes the joint states of all the joints with hardware_interfaces and advertises the topic on /joint_states.
+  -->
+  <node name="controller_spawner"
+        pkg="controller_manager"
+        type="spawner" 
+        respawn="false"
+        output="screen"
+        args="wheel_1 wheel_2 wheel_3 encoder_1 encoder_2 encoder_3 stepper joint_state_controller"
+	/>
+
+  <!-- Run the robot_state_publisher node -->
+  <node pkg="robot_state_publisher"
+	type="robot_state_publisher"
+	name="rob_st_pub"
+	
+	/>
+
+  <!-- Run the odometry node -->
+  <node pkg="dagozilla_odometry"
+	type="odom.py"
+	name="odometry_node"
+	/>
+
+  <!-- Run the absolute odometry node -->
+  <node pkg="dagozilla_odometry"
+	type="odometry_transform.py"
+	name="odometry_transform_node"
+	/>
+
+  <!-- <node pkg="dagozilla_odometry"
+	type="publish_velocity.py"
+	name="publish_velocity_node"
+	/> -->
+
+  <node pkg="rosserial_python" type="serial_node.py" name="serial_node">
+    <param name="port" value="/dev/ttyACM0"/>
+    <param name="baud" value="57600"/>
+  </node>
+
+  <node
+    pkg="comm_bridge"
+    type="comm_bridge.js"
+    name="comm_bridge"
+    output="screen"
+  />
+
+  <node
+    pkg="movement"
+    type="movement.js"
+    name="movement"
+    output="screen"
+  />
+
+</launch>
